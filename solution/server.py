@@ -1,34 +1,46 @@
 from http.server import HTTPServer ,BaseHTTPRequestHandler
 import json
 class orden_type:
-    def __init__(self,client,status,payment,orden_type):
+    def __init__(self,orden_type,client,status,payment):
         self.client =client
         self.status=status
         self.paymeny=payment
         self.orden_type = orden_type
 
 class ordenfisica(orden_type):
-    def __init__(self,shipping,products):
-        super().__init__(orden_type="fisico")
+    def __init__(self,tipo,client,status,payment,shipping,products):
+        super().__init__(tipo,client,status,payment)
         self.shipping=shipping
-        for product in products:
-            self.product=[product]
+        self.products=products
 
 class ordenDigital(orden_type):
-    def __init__(self,code,expiration):
-        super().__init__(orden_type="digital")
+    def __init__(self,tipo,client,status,payment,code,expiration):
+        super().__init__(tipo,client,status,payment)
         self.code=code
         self.expiration=expiration
 
 class ordenFactory:
-    def create_orden(self, type):
+    def create_orden(self, type,client, estatus,payment,shipping,products):
         if type == "fisico":
-            return ordenfisica()
-        elif type == "digital":
-            return ordenDigital()
+            return ordenfisica("fisico",client,estatus,payment,shipping,products)
         else:
             raise ValueError("Tipo de orden no valido")
-
+class ordenService():
+    def __init__(self, *args, **kwargs):
+        self.orden_factory = ordenFactory()
+        super().__init__(*args, **kwargs)
+    def add(self, data):
+        if(data.get("orden_type")=="fisico"):
+            orden = data.get("orden_type",None)
+            client = data.get("client", None)
+            status = data.get("status", None)
+            payment = data.get("paymet", None)
+            shipping = data.get("shipping", None)
+            products = data.get("products",[])
+            orden_type = self.orden_factory.create_orden(
+                orden,client,status,payment,shipping,products
+            )
+        return orden_type
 class HTTPDataHandler:
     @staticmethod
     def handle_response(handler, status, data):
@@ -47,17 +59,14 @@ class HTTPDataHandler:
 class OrdenequestHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         self.orden_factory = ordenFactory()
+        self.ordenService=ordenService()
         super().__init__(*args, **kwargs)
 
     def do_POST(self):
         if self.path == "/orders":
             data = HTTPDataHandler.handle_reader(self)
-            orden = data.get("orden_type")
-            orden_type = self.orden_factory.create_orden(
-                orden
-            )
-            response_data = {"message": orden_type.deliver()}
-            HTTPDataHandler.handle_response(self, 201, response_data)
+            temp=self.ordenService.add(data)
+            HTTPDataHandler.handle_response(self, 201,temp)
         else:
             HTTPDataHandler.handle_response(
                 self, 404, {"message": "Ruta no encontrada"}

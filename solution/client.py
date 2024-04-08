@@ -4,8 +4,13 @@ url = "http://localhost:8000/orders"
 
 
 headers = {"Content-Type": "application/json"}
-orden_type = "fisico"
-data = {"orden_type": orden_type}
+
+data = {"orden_type": "fisico",
+        "client": "Juan Perez",
+        "payment": "Tarjeta de credito",
+        "shipping": 10,
+        "products":["camiseta","pantalon","zapatos"]        
+        }
 response = requests.post(url, json=data, headers=headers)
 
 if response.status_code == 200:
